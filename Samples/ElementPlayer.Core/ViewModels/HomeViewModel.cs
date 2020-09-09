@@ -41,6 +41,9 @@ namespace ElementPlayer.Core.ViewModels
 
         private async Task SelectItem(IMediaItem mediaItem)
         {
+            //CrossMediaManager.Current.StepSizeBackward = TimeSpan.FromSeconds(5);
+            //CrossMediaManager.Current.StepSizeForward = TimeSpan.FromSeconds(60);
+
             await NavigationService.Navigate<PlayerViewModel>();
 
             await MediaManager.Play(mediaItem);

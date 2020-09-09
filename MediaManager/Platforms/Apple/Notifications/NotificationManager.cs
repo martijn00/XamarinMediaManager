@@ -78,11 +78,11 @@ namespace MediaManager.Platforms.Apple.Notifications
                     CommandCenter.SeekForwardCommand.AddTarget(SeekForwardCommand);
 
                     CommandCenter.SkipBackwardCommand.Enabled = true;
-                    CommandCenter.SkipBackwardCommand.PreferredIntervals = new double[] { MediaManager.StepSize.TotalSeconds };
+                    CommandCenter.SkipBackwardCommand.PreferredIntervals = new double[] { MediaManager.StepSizeBackward.TotalSeconds };
                     CommandCenter.SkipBackwardCommand.AddTarget(SkipBackwardCommand);
 
                     CommandCenter.SkipForwardCommand.Enabled = true;
-                    CommandCenter.SkipForwardCommand.PreferredIntervals = new double[] { MediaManager.StepSize.TotalSeconds };
+                    CommandCenter.SkipForwardCommand.PreferredIntervals = new double[] { MediaManager.StepSizeForward.TotalSeconds };
                     CommandCenter.SkipForwardCommand.AddTarget(SkipForwardCommand);
 
                     CommandCenter.ChangeRepeatModeCommand.Enabled = true;

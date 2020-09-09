@@ -34,12 +34,25 @@ namespace MediaManager
         public Timer Timer { get; protected set; } = new Timer(TimerInterval);
 
         public static double TimerInterval { get; set; } = 1000;
-
-        protected TimeSpan _stepSize = TimeSpan.FromSeconds(10);
+        [Obsolete("Use StepSizeForward and StepSizeBackward properties instead.", true)]
         public virtual TimeSpan StepSize
         {
-            get => _stepSize;
-            set => SetProperty(ref _stepSize, value);
+            get => throw new NotImplementedException("This property is obsolete. Use StepSizeForwards and StepSizeBackwards properties instead.");
+            set => throw new NotImplementedException("This property is obsolete. Use StepSizeForwards and StepSizeBackwards properties instead.");
+        }
+
+        protected TimeSpan _stepSizeForward = TimeSpan.FromSeconds(10);
+        public virtual TimeSpan StepSizeForward
+        {
+            get => _stepSizeForward;
+            set => SetProperty(ref _stepSizeForward, value);
+        }
+
+        protected TimeSpan _stepSizeBackward = TimeSpan.FromSeconds(10);
+        public virtual TimeSpan StepSizeBackward
+        {
+            get => _stepSizeBackward;
+            set => SetProperty(ref _stepSizeBackward, value);
         }
 
         protected Dictionary<string, string> _requestHeaders = new Dictionary<string, string>();
@@ -345,14 +358,14 @@ namespace MediaManager
 
         public virtual Task StepBackward()
         {
-            var seekTo = SeekTo(TimeSpan.FromSeconds(double.IsNaN(Position.TotalSeconds) ? 0 : ((Position.TotalSeconds < StepSize.TotalSeconds) ? 0 : Position.TotalSeconds - StepSize.TotalSeconds)));
+            var seekTo = SeekTo(TimeSpan.FromSeconds(double.IsNaN(Position.TotalSeconds) ? 0 : ((Position.TotalSeconds < StepSizeBackward.TotalSeconds) ? 0 : Position.TotalSeconds - StepSizeBackward.TotalSeconds)));
             Timer_Elapsed(null, null);
             return seekTo;
         }
 
         public virtual Task StepForward()
         {
-            var seekTo = SeekTo(TimeSpan.FromSeconds(double.IsNaN(Position.TotalSeconds) ? 0 : Position.TotalSeconds + StepSize.TotalSeconds));
+            var seekTo = SeekTo(TimeSpan.FromSeconds(double.IsNaN(Position.TotalSeconds) ? 0 : Position.TotalSeconds + StepSizeForward.TotalSeconds));
             Timer_Elapsed(null, null);
             return seekTo;
         }

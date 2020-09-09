@@ -131,16 +131,32 @@ namespace MediaManager
             set => SetProperty(ref _mediaBrowserManager, value);
         }
 
-        public override TimeSpan StepSize
+        public override TimeSpan StepSizeForward
         {
-            get => base.StepSize;
+            get => _stepSizeForward;
             set
             {
-                base.StepSize = value;
+                base.StepSizeForward = value;
                 var playerNotificationManager = (Notification as MediaManager.Platforms.Android.Notifications.NotificationManager)?.PlayerNotificationManager;
                 playerNotificationManager?.SetFastForwardIncrementMs((long)value.TotalMilliseconds);
+            }
+        }
+
+        public override TimeSpan StepSizeBackward
+        {
+            get => _stepSizeBackward;
+            set
+            {
+                base.StepSizeBackward = value;
+                var playerNotificationManager = (Notification as MediaManager.Platforms.Android.Notifications.NotificationManager)?.PlayerNotificationManager;
                 playerNotificationManager?.SetRewindIncrementMs((long)value.TotalMilliseconds);
             }
+        }
+        [Obsolete("Use StepSizeForward and StepSizeBackward properties instead.", true)]
+        public virtual TimeSpan StepSize
+        {
+            get => throw new NotImplementedException("This property is obsolete. Use StepSizeForwards and StepSizeBackwards properties instead.");
+            set => throw new NotImplementedException("This property is obsolete. Use StepSizeForwards and StepSizeBackwards properties instead.");
         }
 
         private IMediaPlayer _mediaPlayer;
