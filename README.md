@@ -180,7 +180,8 @@ void ToggleShuffle();
 
 ```csharp
 Dictionary<string, string> RequestHeaders { get; set; }
-TimeSpan StepSize { get; set; }
+TimeSpan StepSizeForward { get; set; }
+TimeSpan StepSizeBackward { get; set; }
 MediaPlayerState State { get; }
 TimeSpan Position { get; }
 TimeSpan Duration { get; }
