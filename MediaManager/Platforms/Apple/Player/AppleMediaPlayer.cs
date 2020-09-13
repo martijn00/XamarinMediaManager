@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using AVFoundation;
@@ -10,10 +11,11 @@ using MediaManager.Media;
 using MediaManager.Platforms.Apple.Media;
 using MediaManager.Platforms.Apple.Playback;
 using MediaManager.Player;
+using MediaManager.Queue;
 
 namespace MediaManager.Platforms.Apple.Player
 {
-    public abstract class AppleMediaPlayer : MediaPlayerBase, IMediaPlayer<AVQueuePlayer>
+    public abstract class AppleMediaPlayer : MediaPlayerBase, IMediaPlayer<AppleQueuePlayer>
     {
         protected MediaManagerImplementation MediaManager = CrossMediaManager.Apple;
 
@@ -21,8 +23,8 @@ namespace MediaManager.Platforms.Apple.Player
         {
         }
 
-        private AVQueuePlayer _player;
-        public AVQueuePlayer Player
+        private AppleQueuePlayer _player;
+        public AppleQueuePlayer Player
         {
             get
             {
@@ -55,9 +57,11 @@ namespace MediaManager.Platforms.Apple.Player
         public override event BeforePlayingEventHandler BeforePlaying;
         public override event AfterPlayingEventHandler AfterPlaying;
 
+        private IMediaQueue _currentQueue;
+
         protected virtual void Initialize()
         {
-            Player = new AVQueuePlayer();
+            Player = new AppleQueuePlayer();
 
             didFinishPlayingObserver = NSNotificationCenter.DefaultCenter.AddObserver(AVPlayerItem.DidPlayToEndTimeNotification, DidFinishPlaying);
             itemFailedToPlayToEndTimeObserver = NSNotificationCenter.DefaultCenter.AddObserver(AVPlayerItem.ItemFailedToPlayToEndTimeNotification, DidErrorOcurred);
@@ -76,6 +80,77 @@ namespace MediaManager.Platforms.Apple.Player
             playbackBufferEmptyToken = Player.AddObserver("currentItem.playbackBufferEmpty", options, PlaybackBufferEmptyChanged);
             presentationSizeToken = Player.AddObserver("currentItem.presentationSize", options, PresentationSizeChanged);
             timedMetaDataToken = Player.AddObserver("currentItem.timedMetadata", options, TimedMetaDataChanged);
+
+            CrossMediaManager.Apple.PropertyChanged += MediaManager_PropertyChanged;
+
+            _currentQueue = CrossMediaManager.Apple.Queue;
+            _currentQueue.MediaItems.CollectionChanged += CurrentQueueOnCollectionChanged;
+        }
+
+        private void MediaManager_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(CrossMediaManager.Apple.Queue))
+            {
+                OnQueueChanged();
+            }
+        }
+
+        private void OnQueueChanged()
+        {
+            if (_currentQueue != null)
+            {
+                _currentQueue.MediaItems.CollectionChanged -= CurrentQueueOnCollectionChanged;
+            }
+
+            _currentQueue = CrossMediaManager.Apple.Queue;
+            _currentQueue.MediaItems.CollectionChanged += CurrentQueueOnCollectionChanged;
+        }
+
+        private void CurrentQueueOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            switch (e.Action)
+            {
+                case System.Collections.Specialized.NotifyCollectionChangedAction.Add:
+                    if (Player.AllItems.Count != MediaManager.Queue.Count)
+                    {
+                        for (var i = 0; i < e.NewItems.Count; i++)
+                        {
+                            var mediaItem = (IMediaItem)e.NewItems[i];
+                            Player.InsertItem(mediaItem.ToAVPlayerItem(), e.NewStartingIndex + i);
+                        }
+                    }
+                    break;
+                case System.Collections.Specialized.NotifyCollectionChangedAction.Move:
+                    for (var i = e.NewItems.Count - 1; i >= 0; i--)
+                    {
+                        var item = Player.Items[e.OldStartingIndex + i];
+                        Player.RemoveItem(e.OldStartingIndex + i);
+                        Player.InsertItem(item, Player.Items[e.NewStartingIndex - 1]);
+                    }
+                    break;
+                case System.Collections.Specialized.NotifyCollectionChangedAction.Remove:
+                    if (e.NewItems.Count > 1)
+                    {
+                        for (int i = 0; i > e.NewItems.Count; i++)
+                            Player.RemoveItem(i);
+                    }
+                    else
+                        Player.RemoveItem(e.OldStartingIndex);
+                    break;
+                case System.Collections.Specialized.NotifyCollectionChangedAction.Replace:
+                    for (var i = 0; i < e.NewItems.Count; i++)
+                    {
+                        var replace = Player.Items[e.OldStartingIndex + i];
+                        var mediaItem = (IMediaItem)e.NewItems[i];
+                        Player.InsertItem(mediaItem.ToAVPlayerItem(), replace);
+                        Player.RemoveItem(replace);
+                    }
+
+                    break;
+                case System.Collections.Specialized.NotifyCollectionChangedAction.Reset:
+                    Player.RemoveAllItems();
+                    break;
+            }
         }
 
         protected virtual void PresentationSizeChanged(NSObservedChange obj)
@@ -179,11 +254,11 @@ namespace MediaManager.Platforms.Apple.Player
             MediaManager.OnMediaItemFinished(this, new MediaItemEventArgs(MediaManager.Queue.Current));
 
             //TODO: Android has its own queue and goes to next. Maybe use native apple queue
-            var succesfullNext = await MediaManager.PlayNext();
+            /*var succesfullNext = await MediaManager.PlayNext();
             if (!succesfullNext)
             {
                 await Stop();
-            }
+            }*/
         }
 
         public override Task Pause()
@@ -195,14 +270,20 @@ namespace MediaManager.Platforms.Apple.Player
         public override async Task Play(IMediaItem mediaItem)
         {
             BeforePlaying?.Invoke(this, new MediaPlayerEventArgs(mediaItem, this));
-            await Play(mediaItem.ToAVPlayerItem());
+            var index = _currentQueue.IndexOf(mediaItem);
+            if (index >= 0)
+                await Play(index);
+            else
+            {
+                Player.RemoveAllItems();
+                Player.ReplaceCurrentItemWithPlayerItem(mediaItem.ToAVPlayerItem());
+                await Play();
+            }
             AfterPlaying?.Invoke(this, new MediaPlayerEventArgs(mediaItem, this));
         }
 
         public override async Task Play(IMediaItem mediaItem, TimeSpan startAt, TimeSpan? stopAt = null)
         {
-            BeforePlaying?.Invoke(this, new MediaPlayerEventArgs(mediaItem, this));
-
             if (stopAt is TimeSpan endTime)
             {
                 var values = new NSValue[]
@@ -213,12 +294,10 @@ namespace MediaManager.Platforms.Apple.Player
                 playbackTimeObserver = Player.AddBoundaryTimeObserver(values, null, OnPlayerBoundaryReached);
             }
 
-            await Play(mediaItem.ToAVPlayerItem());
+            await Play(mediaItem);
 
             if (startAt != TimeSpan.Zero)
                 await SeekTo(startAt);
-
-            AfterPlaying?.Invoke(this, new MediaPlayerEventArgs(mediaItem, this));
         }
 
         protected virtual async void OnPlayerBoundaryReached()
@@ -227,10 +306,10 @@ namespace MediaManager.Platforms.Apple.Player
             Player.RemoveTimeObserver(playbackTimeObserver);
         }
 
-        public virtual async Task Play(AVPlayerItem playerItem)
+        public virtual async Task Play(int index)
         {
-            Player.ActionAtItemEnd = AVPlayerActionAtItemEnd.None;
-            Player.ReplaceCurrentItemWithPlayerItem(playerItem);
+            Player.ActionAtItemEnd = AVPlayerActionAtItemEnd.Advance;
+            Player.PlayItemAtIndex(index);
             await Play();
         }
 

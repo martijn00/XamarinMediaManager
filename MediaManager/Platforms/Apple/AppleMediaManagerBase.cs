@@ -14,7 +14,7 @@ using MediaManager.Volume;
 
 namespace MediaManager
 {
-    public abstract class AppleMediaManagerBase<TMediaPlayer> : MediaManagerBase, IMediaManager<AVQueuePlayer> where TMediaPlayer : AppleMediaPlayer, IMediaPlayer<AVQueuePlayer>, new()
+    public abstract class AppleMediaManagerBase<TMediaPlayer> : MediaManagerBase, IMediaManager<AppleQueuePlayer> where TMediaPlayer : AppleMediaPlayer, IMediaPlayer<AppleQueuePlayer>, new()
     {
         public AppleMediaManagerBase()
         {
@@ -36,7 +36,7 @@ namespace MediaManager
 
         public AppleMediaPlayer AppleMediaPlayer => (AppleMediaPlayer)MediaPlayer;
 
-        public AVQueuePlayer Player => ((AppleMediaPlayer)MediaPlayer).Player;
+        public AppleQueuePlayer Player => ((AppleMediaPlayer)MediaPlayer).Player;
 
         private IMediaExtractor _mediaExtractor;
         public override IMediaExtractor Extractor
@@ -124,6 +124,13 @@ namespace MediaManager
                 if (AppleMediaPlayer?.Player != null)
                     Player.Rate = value;
             }
+        }
+
+        public override Task<bool> PlayQueueItem(IMediaItem mediaItem)
+        {
+            Queue.CurrentIndex = Queue.IndexOf(mediaItem);
+            Player.PlayItemAtIndex(Queue.CurrentIndex);
+            return Task.FromResult(true);
         }
     }
 }

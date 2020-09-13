@@ -7,7 +7,7 @@ using MediaManager.Video;
 
 namespace MediaManager.Platforms.Mac.Player
 {
-    public class MacMediaPlayer : AppleMediaPlayer, IMediaPlayer<AVQueuePlayer, VideoView>
+    public class MacMediaPlayer : AppleMediaPlayer, IMediaPlayer<AppleQueuePlayer, VideoView>
     {
         public VideoView PlayerView => VideoView as VideoView;
 
