@@ -110,6 +110,8 @@ namespace MediaManager.Forms
             Buffered = e.Buffered;
         }
 
+        public bool ExitsFullScreenWhenPlaybackEnds { get; set; }
+
         public static readonly BindableProperty VideoAspectProperty =
             BindableProperty.Create(nameof(VideoAspect), typeof(VideoAspectMode), typeof(VideoView), VideoAspectMode.AspectFit, propertyChanged: OnVideoAspectPropertyChanged, defaultValueCreator: x => MediaManager.MediaPlayer.VideoAspect);
 

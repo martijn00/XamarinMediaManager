@@ -16,6 +16,7 @@ namespace MediaManager.Forms.Platforms.iOS
             {
                 args.OldElement.Dispose();
             }
+
             if (args.NewElement != null)
             {
                 if (Control == null)
@@ -24,6 +25,8 @@ namespace MediaManager.Forms.Platforms.iOS
                     _videoView = new MediaManager.Platforms.Ios.Video.VideoView();
                     SetNativeControl(_videoView);
                 }
+
+                Control.PlayerViewController.ExitsFullScreenWhenPlaybackEnds = args.NewElement.ExitsFullScreenWhenPlaybackEnds;
             }
 
             base.OnElementChanged(args);

@@ -22,6 +22,7 @@ namespace MediaManager.Forms.Platforms.Android
             {
                 args.OldElement.Dispose();
             }
+
             if (args.NewElement != null)
             {
                 if (Control == null)
